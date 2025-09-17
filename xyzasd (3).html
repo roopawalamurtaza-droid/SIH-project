@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartPath Learning Universe</title>
+    <!-- Add Manifest for PWA capabilities -->
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Sora:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Oriya:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- Dark Theme (Default) --- */
+        :root {
+            --background: #0D1117;
+            --surface: #161B22;
+            --surface-light: #222933;
+            --border: #30363D;
+            --text-primary: #C9D1D9;
+            --text-secondary: #8B949E;
+            --accent: #58A6FF;
+            --accent-glow: rgba(88, 166, 255, 0.2);
+            --accent-text: #FFFFFF;
+        }
+
+        /* --- Light Theme --- */
+        [data-theme="light"] {
+            --background: #F3F4F6;
+            --surface: #FFFFFF;
+            --surface-light: #E5E7EB;
+            --border: #D1D5DB;
+            --text-primary: #1F2937;
+            --text-secondary: #4B5563;
+            --accent: #3B82F6;
+            --accent-glow: rgba(59, 130, 246, 0.2);
+        }
+
+        html, body { 
+            font-family: 'Sora', 'Noto Sans Oriya', 'Noto Sans Devanagari', 'Inter', system-ui, sans-serif; 
+            background-color: var(--background);
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            height: 100%;
+        }
+        h1, h2, h3, h4 { 
+            font-family: 'Manrope', 'Noto Sans Oriya', 'Noto Sans Devanagari', sans-serif;
+            color: var(--text-primary);
+        }
+        .text-secondary { color: var(--text-secondary); }
+        .text-accent { color: var(--accent); }
+        .text-accent-text { color: var(--accent-text); }
+
+
+        .page-section { display: none; }
+        .page-section.active { display: block; animation: fadeIn 0.5s ease-out; }
+        .bottom-nav-link.active {
+            color: var(--accent);
+            background-color: var(--accent-glow);
+        }
+        .card {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1), 0 0 20px var(--accent-glow);
+            border-color: var(--accent);
+        }
+        .leaderboard-content { display: none; }
+        .leaderboard-content.active { display: block; }
+        .tab-btn { background-color: var(--surface); color: var(--text-secondary); }
+        .tab-btn.active { background-color: var(--accent); color: var(--accent-text); }
+        .animate-fadeInUp { animation: fadeInUp 0.5s ease-out forwards; opacity: 0; }
+        .preloader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--background); z-index: 100; display: flex; justify-content: center; align-items: center; transition: opacity 0.5s ease; }
+        .spinner { border: 4px solid var(--surface); border-top: 4px solid var(--accent); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        #starfield { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; transition: opacity 0.5s ease; }
+        body[data-theme="light"] #starfield { opacity: 0; }
+        .toast { position: fixed; bottom: 90px; right: 20px; background-color: var(--surface); color: var(--text-primary); padding: 1rem; border-radius: 0.5rem; border: 1px solid var(--border); box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 100; transform: translateY(150%); opacity: 0; transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .achievement-badge {
+            background-color: var(--surface-light);
+            border-radius: 50%;
+            width: 64px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            transition: all 0.3s ease;
+        }
+        .achievement-badge.locked {
+            filter: grayscale(100%);
+            opacity: 0.5;
+        }
+        
+        /* Themed Components */
+        .bg-accent { background-color: var(--accent); }
+        .themed-background { background-color: var(--background); }
+        .themed-header-footer {
+            background-color: var(--surface);
+            border-color: var(--border);
+        }
+        .themed-bg-surface-light {
+            background-color: var(--surface-light);
+        }
+        .themed-input {
+            background-color: var(--surface-light);
+            border-color: var(--border);
+            color: var(--text-primary);
+        }
+        .themed-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        /* Game Styles */
+        #game-canvas {
+            background-color: var(--surface-light);
+            border-radius: 0.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .health-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #4a5568;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        .health-bar-inner {
+            height: 100%;
+            transition: width 0.3s ease-in-out;
+        }
+        .laser {
+            position: absolute;
+            width: 6px;
+            height: 40px;
+            background: linear-gradient(to top, #fde047, #fef9c3);
+            box-shadow: 0 0 10px #fde047, 0 0 20px #fde047;
+            border-radius: 3px;
+            animation: shoot-laser 0.3s ease-out forwards;
+        }
+        @keyframes shoot-laser {
+            from { transform: translateY(0) scaleY(1); opacity: 1; }
+            to { transform: translateY(-300px) scaleY(2); opacity: 0; }
+        }
+        .tentacle-attack {
+            position: absolute;
+            width: 25px;
+            height: 120px;
+            background: linear-gradient(to top, #a78bfa, #c4b5fd);
+            border-radius: 50% 50% 10px 10px;
+            transform-origin: bottom;
+            animation: whip-tentacle 0.4s ease-in-out forwards;
+        }
+         @keyframes whip-tentacle {
+            0% { transform: translateY(50px) rotate(20deg); opacity: 0; }
+            50% { transform: translateY(-60px) rotate(-25deg); opacity: 1;}
+            100% { transform: translateY(150px) rotate(35deg); opacity: 0;}
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body data-theme="dark">
+
+    <canvas id="starfield"></canvas>
+    <div id="preloader" class="preloader"><div class="spinner"></div></div>
+    <div id="toast" class="toast"></div>
+
+    <main id="login-page" class="hidden flex items-center justify-center min-h-screen p-4">
+         <div class="card p-8 rounded-2xl w-full max-w-sm text-center animate-fadeInUp">
+            <div class="w-16 h-16 mx-auto bg-gradient-to-br from-sky-500 to-sky-400 rounded-xl flex items-center justify-center text-3xl mb-6">🚀</div>
+            <h2 class="text-3xl font-bold mb-2" data-translate="login_welcome">Welcome to SmartPath</h2>
+            <p class="text-secondary mb-8" data-translate="login_subtitle">Your learning universe awaits.</p>
+            <div class="space-y-4">
+                <input type="text" data-translate-placeholder="username_placeholder" placeholder="Username" class="themed-input w-full p-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-accent">
+                <input type="password" data-translate-placeholder="password_placeholder" placeholder="Password" class="themed-input w-full p-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-accent">
+                <button id="login-btn" class="w-full bg-accent text-white font-bold py-3 rounded-lg hover:opacity-90 transition-opacity" data-translate="login_button">Login</button>
+            </div>
+        </div>
+    </main>
+
+    <div id="app-shell" class="hidden flex flex-col min-h-screen themed-background">
+        <header class="themed-header-footer sticky top-0 z-50 p-4 border-b">
+            <div class="max-w-5xl mx-auto">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-sky-500 to-sky-400 rounded-lg flex items-center justify-center text-xl">🚀</div>
+                        <h1 class="text-xl font-extrabold" data-translate="header_title">SmartPath</h1>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="theme-toggle-btn" class="themed-bg-surface-light flex items-center justify-center w-10 h-10 rounded-full text-secondary hover:text-text-primary transition-colors"></button>
+
+                        <div id="lang-switcher-container" class="relative">
+                            <button id="lang-switcher-button" class="themed-bg-surface-light flex items-center gap-2 font-semibold text-secondary hover:text-text-primary transition-colors text-sm px-3 py-2 rounded-md">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm7.5-6.923c-.67.204-1.335.82-1.887 1.855A7.97 7.97 0 0 0 5.145 4.06a.75.75 0 0 1-1.222 0A6.477 6.477 0 0 0 3.5 1.5a.75.75 0 0 1-1.222 0A.75.75 0 0 1 2.25 0a7.97 7.97 0 0 0-1.887 1.855C.01 2.21 0 2.58 0 3a8 8 0 0 1 4.25-1.55a.75.75 0 0 1 .15 1.493A6.5 6.5 0 0 0 5.45 6.5a.75.75 0 0 1-1.5 0 5 5 0 0 1-.95-2.122A7.022 7.022 0 0 1 2.25 1.5a.75.75 0 0 1-.25-1.455A7.97 7.97 0 0 0 0 3c0 .42.02.83.056 1.233A7.02 7.02 0 0 1 4.23 4.23a.75.75 0 0 1 1.222 0A6.477 6.477 0 0 0 6.5 7.5a.75.75 0 0 1 0 1.5A6.477 6.477 0 0 0 5.455 11.94a.75.75 0 0 1-1.222 0 7.02 7.02 0 0 1-2.023-2.023A.75.75 0 0 1 2.25 8.5a.75.75 0 0 1-.75.75 7.97 7.97 0 0 0-1.55 4.25c.03.42.05.83.056 1.233A7.02 7.02 0 0 1 3.5 13.5a.75.75 0 0 1 1.222 0A6.477 6.477 0 0 0 6.5 16a.75.75 0 0 1 0-1.5 5 5 0 0 1-.95-2.122A7.022 7.022 0 0 1 3.5 10.5a.75.75 0 0 1 .25 1.455A7.97 7.97 0 0 0 6 13c.27.02.54.03.81.033a.75.75 0 0 1 .18 1.487A8.008 8.008 0 0 1 8.5 16a8 8 0 0 1-6.645-12.145A.75.75 0 0 1 2.25 4.5a.75.75 0 0 1 .75-.75 7.97 7.97 0 0 0 4.5-1.677A.75.75 0 0 1 8 1.077zM15.944 4.767c.03-.4.05-.81.056-1.233A7.02 7.02 0 0 0 12.5 1.5a.75.75 0 0 0-1.222 0A6.477 6.477 0 0 1 9.5 4a.75.75 0 0 0 0 1.5 5 5 0 0 0 .95 2.122A7.022 7.022 0 0 0 12.5 9.5a.75.75 0 0 0-.25-1.455A7.97 7.97 0 0 1 10 8c-.27-.02-.54-.03-.81-.033a.75.75 0 0 0-.18-1.487A8.008 8.008 0 0 0 7.5 8a8 8 0 0 0 6.645 12.145.75.75 0 0 0 .355-.68A.75.75 0 0 0 13.75 12a7.97 7.97 0 0 1-4.5 1.677.75.75 0 0 0-.5 1.414A8.01 8.01 0 0 0 16 11.5c0-.42-.02-.83-.056-1.233A7.02 7.02 0 0 0 11.77 8.23a.75.75 0 0 0-1.222 0A6.477 6.477 0 0 1 9.5 5.5a.75.75 0 0 0 0-1.5A6.477 6.477 0 0 1 10.525.06a.75.75 0 0 0 .222 1.222 7.02 7.02 0 0 0 2.023 2.023.75.75 0 0 0 1.06-.18z"/></svg>
+                                <span id="current-lang-text">English</span>
+                            </button>
+                            <div id="lang-dropdown" class="absolute top-full right-0 mt-2 w-48 bg-surface rounded-md shadow-lg border border-border hidden z-50">
+                                <a href="#" data-lang="en" class="block px-4 py-2 text-sm hover:bg-surface-light">English</a>
+                                <a href="#" data-lang="or" class="block px-4 py-2 text-sm hover:bg-surface-light">Odia (ଓଡ଼ିଆ)</a>
+                                <a href="#" data-lang="hi" class="block px-4 py-2 text-sm hover:bg-surface-light">Hindi (हिन्दी)</a>
+                            </div>
+                        </div>
+                        <img src="https://placehold.co/40x40/38bdf8/111827?text=RB" alt="User Avatar" class="w-10 h-10 rounded-full border-2 border-slate-700">
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <main class="flex-grow px-6 sm:px-8 lg:px-10 pt-8 pb-40">
+            <section id="home-page" class="page-section space-y-8">
+                <div class="animate-fadeInUp">
+                    <h2 class="text-3xl font-bold" id="welcome-greeting"></h2>
+                    <p class="text-secondary mt-1" data-translate="welcome_journey">Ready to continue your learning journey?</p>
+                </div>
+                <div id="stats-container" class="grid grid-cols-2 gap-4 animate-fadeInUp" style="animation-delay: 0.1s;"></div>
+                <div id="continue-learning-container" class="animate-fadeInUp" style="animation-delay: 0.2s;"></div>
+                <div id="daily-quests-container" class="animate-fadeInUp" style="animation-delay: 0.3s;"></div>
+            </section>
+
+            <section id="courses-page" class="page-section">
+                <h2 class="text-3xl font-bold mb-6 animate-fadeInUp" data-translate="courses_title">Your Courses</h2>
+                <div id="courses-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+            </section>
+            
+            <section id="lesson-page" class="page-section">
+                 <div class="flex items-center gap-4 mb-6 animate-fadeInUp">
+                    <button id="back-to-courses-btn" class="bg-surface p-2 rounded-lg text-secondary hover:text-text-primary transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+                    <h2 id="lesson-title" class="text-3xl font-bold"></h2>
+                </div>
+                <div class="space-y-6">
+                    <div class="card p-5 rounded-2xl animate-fadeInUp" style="animation-delay: 0.1s;">
+                        <h3 class="font-bold text-lg mb-2" data-translate="read_chapter">Read Chapter</h3>
+                        <p class="text-secondary" data-translate="read_chapter_desc">Review the core concepts and examples for this topic.</p>
+                    </div>
+                    <div class="card p-5 rounded-2xl animate-fadeInUp" style="animation-delay: 0.2s;">
+                        <h3 class="font-bold text-lg mb-2" data-translate="chapter_quiz">Chapter Quiz</h3>
+                        <p class="text-secondary" data-translate="chapter_quiz_desc">Test your knowledge with multiple-choice questions.</p>
+                    </div>
+                    <div class="card p-5 rounded-2xl animate-fadeInUp bg-gradient-to-br from-sky-500/10 to-transparent border-sky-500/30" style="animation-delay: 0.3s;">
+                        <h3 id="lab-title" class="font-bold text-accent text-lg mb-2" data-translate="quiz_battle">Chapter Quiz Battle</h3>
+                        <p class="text-secondary mb-4" data-translate="interactive_lab_desc">Get hands-on with a fun mini-game to master the concepts.</p>
+                        <button id="play-quiz-battle-btn" class="bg-accent text-accent-text font-bold py-2 px-5 rounded-lg hover:opacity-90 transition-opacity w-full" data-translate="play_now">Play Now</button>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="quiz-page" class="page-section">
+                 <div class="max-w-2xl mx-auto">
+                    <div class="card p-6">
+                        <div id="standard-quiz-container">
+                            <h2 class="text-2xl font-bold mb-4">Math Quiz</h2>
+                            <div id="standard-question-container" class="mb-6 hidden">
+                                <p id="standard-question-text" class="text-lg mb-4"></p>
+                                <div id="standard-answer-options" class="space-y-2"></div>
+                            </div>
+                            <div id="standard-result" class="text-lg font-semibold my-4"></div>
+                            <button id="start-quiz-btn" class="bg-accent text-white font-bold py-2 px-5 rounded-lg hover:opacity-90 transition-opacity">Start Quiz</button>
+                            <button id="next-question-btn" class="hidden bg-accent text-white font-bold py-2 px-5 rounded-lg hover:opacity-90 transition-opacity">Next Question</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quiz Battle Game Page -->
+            <section id="quiz-battle-page" class="page-section">
+                <div class="max-w-3xl mx-auto">
+                    <div class="relative mb-4">
+                        <canvas id="game-canvas" class="w-full" width="800" height="400"></canvas>
+                        <div id="player-attack-animation" class="absolute"></div>
+                        <div id="enemy-attack-animation" class="absolute"></div>
+                    </div>
+                    <div id="quiz-ui-container" class="card p-4 sm:p-6">
+                        <div id="game-active-view">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 id="question-number" class="font-bold text-lg">Question 1/20</h3>
+                                <div id="timer" class="font-bold text-2xl text-accent">15</div>
+                            </div>
+                            <p id="question-text" class="text-lg mb-6 min-h-[3em]"></p>
+                            <div id="answer-options" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+                        </div>
+                         <div id="game-over-view" class="hidden text-center py-8">
+                            <h2 id="game-over-text" class="text-4xl font-bold mb-4"></h2>
+                            <button id="return-to-courses-btn" class="bg-accent text-accent-text font-bold py-2 px-6 rounded-lg hover:opacity-90">Return to Courses</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="leaderboard-page" class="page-section">
+                <div class="animate-fadeInUp" style="animation-delay: 0.1s;">
+                    <h2 class="text-3xl font-bold mb-6" data-translate="leaderboard_title">Leaderboard</h2>
+                    <div class="flex bg-surface rounded-lg p-1 mb-6">
+                        <button id="xp-tab" class="tab-btn active w-1/2 py-2 text-sm font-semibold rounded-md" data-translate="xp_tab">⚡ XP</button>
+                        <button id="streak-tab" class="tab-btn w-1/2 py-2 text-sm font-semibold" data-translate="streak_tab">🔥 Streak</button>
+                    </div>
+                </div>
+                <div id="xp-leaderboard-content" class="leaderboard-content active"><div id="xp-leaderboard-container" class="space-y-3"></div></div>
+                <div id="streak-leaderboard-content" class="leaderboard-content"><div id="streak-leaderboard-container" class="space-y-3"></div></div>
+            </section>
+            
+            <section id="profile-page" class="page-section">
+                 <div class="card p-6 rounded-2xl text-center animate-fadeInUp">
+                    <img src="https://placehold.co/96x96/38bdf8/111827?text=RB" alt="User Avatar" class="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-slate-600">
+                    <h2 class="text-2xl font-bold">👤 Rishabh Bhati</h2>
+                    <div class="grid grid-cols-2 gap-4 my-6">
+                        <div class="themed-bg-surface-light p-4 rounded-xl"><p class="text-secondary text-sm" data-translate="profile_standard">Standard</p><p class="font-bold text-lg">Grade 9</p></div>
+                        <div class="themed-bg-surface-light p-4 rounded-xl"><p class="text-secondary text-sm" data-translate="profile_language">First Language</p><p class="font-bold text-lg">English</p></div>
+                    </div>
+                    <div class="themed-bg-surface-light p-4 rounded-xl mb-4 text-left">
+                        <div class="flex justify-between items-center mb-2">
+                            <p id="profile-level" class="font-bold"></p>
+                            <p id="profile-xp-needed" class="text-secondary text-sm"></p>
+                        </div>
+                        <div class="w-full bg-slate-600 rounded-full h-2.5"><div id="profile-progress-bar" class="bg-gradient-to-r from-sky-400 to-cyan-300 h-2.5 rounded-full"></div></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 text-left">
+                        <div class="themed-bg-surface-light p-4 rounded-xl">
+                            <p class="text-secondary text-sm" data-translate="total_xp">Total XP</p>
+                            <p id="profile-total-xp" class="text-2xl font-bold"></p>
+                        </div>
+                        <div class="themed-bg-surface-light p-4 rounded-xl">
+                            <p class="text-secondary text-sm" data-translate="longest_streak">Longest Streak</p>
+                            <p id="profile-longest-streak" class="text-2xl font-bold"></p>
+                        </div>
+                    </div>
+                    <div class="text-left mt-8">
+                        <h3 class="text-xl font-bold mb-4" data-translate="achievements_title">Achievements</h3>
+                        <div id="achievements-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
+                            <!-- Achievements will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <footer id="bottom-nav" class="themed-header-footer fixed bottom-0 left-0 right-0 z-40 backdrop-blur-sm border-t hidden">
+        <nav class="max-w-5xl mx-auto flex items-center justify-around p-2">
+            <a href="#" class="bottom-nav-link flex flex-col items-center p-2 rounded-lg w-1/5 text-secondary" data-target="home-page"><span class="text-2xl">🏠</span><span class="text-xs font-semibold" data-translate="dashboard_nav">Dashboard</span></a>
+            <a href="#" class="bottom-nav-link flex flex-col items-center p-2 rounded-lg w-1/5 text-secondary" data-target="courses-page"><span class="text-2xl">📘</span><span class="text-xs font-semibold" data-translate="courses_nav">Courses</span></a>
+            <a href="#" class="bottom-nav-link flex flex-col items-center p-2 rounded-lg w-1/5 text-secondary" data-target="quiz-page"><span class="text-2xl">❓</span><span class="text-xs font-semibold">Quiz</span></a>
+            <a href="#" class="bottom-nav-link flex flex-col items-center p-2 rounded-lg w-1/5 text-secondary" data-target="leaderboard-page"><span class="text-2xl">🏆</span><span class="text-xs font-semibold" data-translate="ranks_nav">Ranks</span></a>
+            <a href="#" class="bottom-nav-link flex flex-col items-center p-2 rounded-lg w-1/5 text-secondary" data-target="profile-page"><span class="text-2xl">👤</span><span class="text-xs font-semibold" data-translate="profile_nav">Profile</span></a>
+        </nav>
+    </footer>
+
+    <script>
+        // --- SERVICE WORKER REGISTRATION ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- DATA ---
+            const studentData = [ { name: 'Hetvi', xp: 3500, color: 'f87171', isUser: false }, { name: 'Murtaza', xp: 3120, color: 'fb923c', isUser: false }, { name: 'Drashti', xp: 2850, color: 'a78bfa', isUser: false }, { name: 'Vishwam', xp: 2750, color: 'fbbf24', isUser: false }, { name: 'Netram', xp: 2600, color: '34d399', isUser: false }, { name: 'Rishabh', xp: 2450, color: '38bdf8', isUser: true }];
+            const streakData = [ { name: 'Murtaza', streak: 18, color: 'fb923c', isUser: false }, { name: 'Hetvi', streak: 15, color: 'f87171', isUser: false }, { name: 'Rishabh', streak: 15, color: '38bdf8', isUser: true }, { name: 'Vishwam', streak: 12, color: 'fbbf24', isUser: false }, { name: 'Drashti', streak: 5, color: 'a78bfa', isUser: false }, { name: 'Netram', streak: 3, color: '34d399', isUser: false }];
+            const coursesData = [
+                { name: "Mathematics", or_name: "ଗଣିତ", hi_name: "गणित", progress: 75, icon: "➗", gradient: 'bg-gradient-to-r from-purple-500 to-purple-400', lab: "Geometry Puzzle", or_lab: "ଜ୍ୟାମିତି ପଜଲ୍", hi_lab: "ज्यामिति पहेली" },
+                { name: "Physics", or_name: "ପଦାର୍ଥ ବିଜ୍ଞାନ", hi_name: "भौतिक विज्ञान", progress: 40, icon: "🔭", gradient: 'bg-gradient-to-r from-green-500 to-green-400', lab: "Levers & Pulleys", or_lab: "ଲିଭର୍ ଏବଂ ପୁଲି", hi_lab: "लीवर और पुली" },
+                { name: "Chemistry", or_name: "ରସାୟନ ବିଜ୍ଞାନ", hi_name: "रसायन विज्ञान", progress: 60, icon: "⚗", gradient: 'bg-gradient-to-r from-orange-500 to-orange-400', lab: "Molecule Builder", or_lab: "ଅଣୁ ନିର୍ମାତା", hi_lab: "अणु निर्माता" },
+                { name: "Biology", or_name: "ଜୀବ ବିଜ୍ଞାନ", hi_name: "जीव विज्ञान", progress: 30, icon: "🧬", gradient: 'bg-gradient-to-r from-sky-500 to-sky-400', lab: "Cell Explorer", or_lab: "କୋଷ ଏକ୍ସପ୍ଲୋରର୍", hi_lab: "सेल एक्सप्लोरर" }
+            ];
+            const achievementsData = [
+                { id: 'streak_10', name: '10 Day Streak', icon: '🔥', unlocked: true, desc: 'Maintain a 10-day learning streak.'},
+                { id: 'course_complete', name: 'Course Complete', icon: '🎓', unlocked: false, desc: 'Finish your first course.'},
+                { id: 'xp_1000', name: 'XP Collector', icon: '⚡', unlocked: true, desc: 'Earn 1,000 Total XP.'},
+                { id: 'perfect_quiz', name: 'Perfectionist', icon: '🎯', unlocked: true, desc: 'Get a perfect score on a quiz.'},
+                { id: 'explorer', name: 'Explorer', icon: '🗺️', unlocked: false, desc: 'Visit every page in the app.'},
+            ];
+            const battleQuizQuestions = [
+                { question: "What is 2 + 2?", options: ["3", "4", "5", "6"], answer: "4" },
+                { question: "What is the capital of France?", options: ["Berlin", "Madrid", "Paris", "Rome"], answer: "Paris" },
+                { question: "What is the largest planet?", options: ["Earth", "Mars", "Jupiter", "Saturn"], answer: "Jupiter" },
+                { question: "What is 8 x 7?", options: ["56", "54", "49", "64"], answer: "56" },
+                 { question: "What is the chemical symbol for water?", options: ["O2", "H2O", "CO2", "NaCl"], answer: "H2O" },
+                { question: "Who wrote 'Hamlet'?", options: ["Dickens", "Austen", "Shakespeare", "Tolkien"], answer: "Shakespeare" },
+                { question: "What is the boiling point of water?", options: ["90°C", "100°C", "110°C", "120°C"], answer: "100°C" },
+                { question: "What is the square root of 81?", options: ["7", "8", "9", "10"], answer: "9" },
+                { question: "Which planet is known as the Red Planet?", options: ["Mars", "Venus", "Jupiter", "Mercury"], answer: "Mars" },
+                { question: "What is the powerhouse of the cell?", options: ["Nucleus", "Ribosome", "Mitochondrion", "Chloroplast"], answer: "Mitochondrion" },
+                { question: "What is 12 * 12?", options: ["124", "132", "144", "156"], answer: "144" },
+                { question: "Who was the first US President?", options: ["Lincoln", "Jefferson", "Washington", "Adams"], answer: "Washington" },
+                { question: "What is the largest ocean?", options: ["Atlantic", "Indian", "Arctic", "Pacific"], answer: "Pacific" },
+                { question: "What is the value of Pi (to 2 decimal places)?", options: ["3.14", "3.15", "3.16", "3.13"], answer: "3.14" },
+                { question: "What is the hardest natural substance on Earth?", options: ["Gold", "Iron", "Diamond", "Platinum"], answer: "Diamond" },
+                { question: "How many continents are there?", options: ["5", "6", "7", "8"], answer: "7" },
+                { question: "What is the capital of Japan?", options: ["Beijing", "Seoul", "Tokyo", "Bangkok"], answer: "Tokyo" },
+                { question: "What is the chemical symbol for gold?", options: ["Ag", "Au", "Pb", "Fe"], answer: "Au" },
+                { question: "Who painted the Mona Lisa?", options: ["Van Gogh", "Picasso", "Da Vinci", "Monet"], answer: "Da Vinci" },
+                { question: "What is the speed of light?", options: ["300,000 km/s", "150,000 km/s", "500,000 km/s", "1,000,000 km/s"], answer: "300,000 km/s" }
+            ];
+            const standardQuizData = [
+                {
+                    question: "What is the capital of Australia?",
+                    options: ["Sydney", "Melbourne", "Canberra", "Perth"],
+                    answer: "Canberra"
+                },
+                {
+                    question: "Which element has the atomic number 1?",
+                    options: ["Helium", "Oxygen", "Hydrogen", "Carbon"],
+                    answer: "Hydrogen"
+                },
+                {
+                    question: "Who is known as the father of computers?",
+                    options: ["Alan Turing", "Charles Babbage", "Tim Berners-Lee", "Steve Jobs"],
+                    answer: "Charles Babbage"
+                }
+            ];
+
+
+            // --- TRANSLATIONS ---
+            const translations = {
+                login_welcome: { en: 'Welcome to SmartPath', or: 'ସ୍ମାର୍ଟପାଥକୁ ସ୍ଵାଗତ', hi: 'स्मार्टपाथ में आपका स्वागत है' },
+                login_subtitle: { en: 'Your learning universe awaits.', or: 'ଆପଣଙ୍କ ଶିକ୍ଷାର ବ୍ରହ୍ମାଣ୍ଡ ଅପେକ୍ଷା କରିଛି।', hi: 'आपका सीखने का ब्रह्मांड इंतजार कर रहा है।' },
+                username_placeholder: { en: 'Username', or: 'ବ୍ୟବହାରକାରୀ ନାମ', hi: 'उपयोगकर्ता नाम' },
+                password_placeholder: { en: 'Password', or: 'ପାସୱାର୍ଡ', hi: 'पासवर्ड' },
+                login_button: { en: 'Login', or: 'ଲଗଇନ୍ କରନ୍ତୁ', hi: 'लॉग इन करें' },
+                header_title: { en: 'SmartPath', or: 'ସ୍ମାର୍ଟପାଥ', hi: 'स्मार्टपाथ' },
+                welcome_greeting: { en: '👋 Welcome, Rishabh!', or: '👋 ସ୍ଵାଗତ, ଋଷଭ!', hi: '👋 स्वागत है, ऋषभ!' },
+                welcome_journey: { en: 'Ready to continue your learning journey?', or: 'ଆପଣଙ୍କ ଶିକ୍ଷା ଯାତ୍ରା ଜାରି ରଖିବାକୁ ପ୍ରସ୍ତୁତ କି?', hi: 'क्या आप अपनी सीखने की यात्रा जारी रखने के लिए तैयार हैं?' },
+                total_xp: { en: 'Total XP', or: 'ମୋଟ XP', hi: 'कुल XP' },
+                day_streak: { en: 'Day Streak', or: 'ଦିନ ଧାରା', hi: 'दिन की स्ट्रीक' },
+                continue_journey: { en: 'Continue Your Journey', or: 'ଆପଣଙ୍କ ଯାତ୍ରା ଜାରି ରଖନ୍ତୁ', hi: 'अपनी यात्रा जारी रखें' },
+                continue_chapter: { en: 'Chapter 4: Work and Energy', or: 'ଅଧ୍ୟାୟ ୪: କାର୍ଯ୍ୟ ଏବଂ ଶକ୍ତି', hi: 'अध्याय 4: कार्य और ऊर्जा' },
+                continue_button: { en: '▶ Continue', or: '▶ ଜାରି ରଖନ୍ତୁ', hi: '▶ जारी रखें' },
+                todays_quests: { en: "Today's Quests", or: 'ଆଜିର କ୍ୱେଷ୍ଟ୍ସ', hi: 'आज के खोज' },
+                math_sprint: { en: 'Math Sprint', or: 'ଗଣିତ ସ୍ପ୍ରିଣ୍ଟ', hi: 'गणित स्प्रिंट' },
+                math_sprint_desc: { en: 'Complete 3 mathematics quizzes.', or: '୩ଟି ଗଣିତ କୁଇଜ୍ ସମ୍ପୂର୍ଣ୍ଣ କରନ୍ତୁ।', hi: '3 गणित क्विज़ पूरे करें।' },
+                perfect_score: { en: 'Perfect Score', or: 'ସମ୍ପୂର୍ଣ୍ଣ ସ୍କୋର', hi: 'परफेक्ट स्कोर' },
+                perfect_score_desc: { en: 'Get 100% on any quiz.', or: 'ଯେକୌଣସି କୁଇଜରେ ୧୦୦% ପାଆନ୍ତୁ।', hi: 'किसी भी क्विज़ में 100% प्राप्त करें।' },
+                daily_checkin: { en: 'Daily Check-in', or: 'ଦୈନିକ ଚେକ୍-ଇନ୍', hi: 'दैनिक चेक-इन' },
+                daily_checkin_desc: { en: "You've completed your daily check-in.", or: 'ଆପଣ ଆପଣଙ୍କର ଦୈନିକ ଚେକ୍-ଇନ୍ ସମ୍ପୂର୍ଣ୍ଣ କରିଛନ୍ତି।', hi: 'आपने अपना दैनिक चेक-इन पूरा कर लिया है।' },
+                complete: { en: 'Complete', or: 'ସମ୍ପୂର୍ଣ୍ଣ', hi: 'पूर्ण' },
+                claim: { en: 'Claim', or: 'ଦାବି କରନ୍ତୁ', hi: 'दावा करें' },
+                courses_title: { en: 'Your Courses', or: 'ଆପଣଙ୍କ ପାଠ୍ୟକ୍ରମ', hi: 'आपके पाठ्यक्रम' },
+                dashboard_nav: { en: 'Dashboard', or: 'ଡ୍ୟାଶବୋର୍ଡ', hi: 'डैशबोर्ड' },
+                courses_nav: { en: 'Courses', or: 'ପାଠ୍ୟକ୍ରମ', hi: 'पाठ्यक्रम' },
+                ranks_nav: { en: 'Ranks', or: 'ରାଣ୍କ', hi: 'रैंक' },
+                profile_nav: { en: 'Profile', or: 'ପ୍ରୋଫାଇଲ୍', hi: 'प्रोफ़ाइल' },
+                read_chapter: { en: 'Read Chapter', or: 'ଅଧ୍ୟାୟ ପଢ଼ନ୍ତୁ', hi: 'अध्याय पढ़ें' },
+                read_chapter_desc: { en: 'Review the core concepts and examples for this topic.', or: 'ଏହି ବିଷୟ ପାଇଁ ମୂଳ ଧାରଣା ଏବଂ ଉଦାହରଣ ସମୀକ୍ଷା କରନ୍ତୁ।', hi: 'इस विषय के लिए मूल अवधारणाओं और उदाहरणों की समीक्षा करें।' },
+                chapter_quiz: { en: 'Chapter Quiz', or: 'ଅଧ୍ୟାୟ କୁଇଜ୍', hi: 'अध्याय प्रश्नोत्तरी' },
+                chapter_quiz_desc: { en: 'Test your knowledge with multiple-choice questions.', or: 'ବହୁ-ବିକଳ୍ପ ପ୍ରଶ୍ନ ସହିତ ଆପଣଙ୍କ ଜ୍ଞาน ପରୀକ୍ଷା କରନ୍ତୁ।', hi: 'बहुविकल्पीय प्रश्नों के साथ अपने ज्ञान का परीक्षण करें।' },
+                quiz_battle: { en: 'Chapter Quiz Battle', or: 'ଅଧ୍ୟାୟ କୁଇଜ୍ ଯୁଦ୍ଧ', hi: 'अध्याय प्रश्नोत्तरी लड़ाई' },
+                interactive_lab_desc: { en: 'Get hands-on with a fun mini-game to master the concepts.', or: 'ଧାରଣାଗୁଡ଼ିକୁ ଆୟତ୍ତ କରିବା ପାଇଁ ଏକ ମଜାଦାର ମିନି-ଗେମ୍ ସହିତ ହାତକୁ ନିଅନ୍ତୁ।', hi: 'अवधारणाओं में महारत हासिल करने के लिए एक मजेदार मिनी-गेम के साथ व्यावहारिक अनुभव प्राप्त करें।' },
+                play_now: { en: 'Play Now', or: 'ବର୍ତ୍ତମାନ ଖେଳନ୍ତୁ', hi: 'अभी खेलें' },
+                leaderboard_title: { en: 'Leaderboard', or: 'ଲିଡରବୋର୍ଡ', hi: 'लीडरबोर्ड' },
+                xp_tab: { en: '⚡ XP', or: '⚡ XP', hi: '⚡ XP' },
+                streak_tab: { en: '🔥 Streak', or: '🔥 ଧାରା', hi: '🔥 स्ट्रीक' },
+                profile_standard: { en: 'Standard', or: 'ମାନକ', hi: 'मानक' },
+                profile_language: { en: 'First Language', or: 'ପ୍ରଥମ ଭାଷା', hi: 'पहली भाषा' },
+                profile_level: { en: 'Level {level}', or: 'ସ୍ତର {level}', hi: 'स्तर {level}' },
+                xp_to_level: { en: '{xp} XP to Level {level}', or: 'ସ୍ତର {level} ପାଇଁ {xp} XP', hi: 'स्तर {level} के लिए {xp} XP' },
+                longest_streak: { en: 'Longest Streak', or: 'ଦୀର୍ଘତମ ଧାରା', hi: 'सबसे लंबी स्ट्रीक' },
+                days_suffix: { en: 'Days', or: 'ଦିନ', hi: 'दिन' },
+                you_suffix: { en: ' (You)', or: ' (ଆପଣ)', hi: ' (आप)' },
+                achievements_title: { en: 'Achievements', or: 'ଉପଲବ୍ଧି', hi: 'उपलब्धियां' }
+            };
+
+            // --- ELEMENTS & STATE ---
+            let currentLanguage = localStorage.getItem('smartpath_lang') || 'en';
+            let currentTheme = localStorage.getItem('smartpath_theme') || 'dark';
+
+            const langSwitcherButton = document.getElementById('lang-switcher-button');
+            const langDropdown = document.getElementById('lang-dropdown');
+            const currentLangText = document.getElementById('current-lang-text');
+            const themeToggleButton = document.getElementById('theme-toggle-btn');
+
+            const xpTab = document.getElementById('xp-tab');
+            const streakTab = document.getElementById('streak-tab');
+            const xpContent = document.getElementById('xp-leaderboard-content');
+            const streakContent = document.getElementById('streak-leaderboard-content');
+            const xpContainer = document.getElementById('xp-leaderboard-container');
+            const streakContainer = document.getElementById('streak-leaderboard-container');
+            const coursesGrid = document.getElementById('courses-grid');
+            const continueLearningContainer = document.getElementById('continue-learning-container');
+            const lessonTitle = document.getElementById('lesson-title');
+            const labTitle = document.getElementById('lab-title');
+            const playQuizBattleBtn = document.getElementById('play-quiz-battle-btn');
+            const backToCoursesBtn = document.getElementById('back-to-courses-btn');
+            const preloader = document.getElementById('preloader');
+            const loginBtn = document.getElementById('login-btn');
+            const loginPage = document.getElementById('login-page');
+            const appShell = document.getElementById('app-shell');
+            const bottomNav = document.getElementById('bottom-nav');
+
+            // --- CORE FUNCTIONS ---
+            
+            function playSound(type) {
+                if(typeof Tone !== 'undefined'){
+                    const synth = new Tone.Synth().toDestination();
+                    if(type === 'reward') {
+                        synth.triggerAttackRelease("E5", "16n", Tone.now());
+                        synth.triggerAttackRelease("G5", "16n", Tone.now() + 0.1);
+                        synth.triggerAttackRelease("C6", "8n", Tone.now() + 0.2);
+                    }
+                    if(type === 'login') {
+                         synth.triggerAttackRelease("C4", "8n", Tone.now());
+                         synth.triggerAttackRelease("E4", "8n", Tone.now() + 0.1);
+                         synth.triggerAttackRelease("G4", "8n", Tone.now() + 0.2);
+                    }
+                }
+            }
+            
+            function setTheme(theme) {
+                currentTheme = theme;
+                localStorage.setItem('smartpath_theme', theme);
+                document.body.dataset.theme = theme;
+                themeToggleButton.innerHTML = theme === 'dark' 
+                    ? `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-sun-fill" viewBox="0 0 16 16"><path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z"/></svg>` 
+                    : `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-moon-fill" viewBox="0 0 16 16"><path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278z"/></svg>`;
+            }
+
+            function setLanguage(lang) {
+                currentLanguage = lang;
+                localStorage.setItem('smartpath_lang', lang);
+                if (lang === 'en') {
+                    currentLangText.innerText = 'English';
+                } else if (lang === 'or') {
+                    currentLangText.innerText = 'Odia';
+                } else {
+                    currentLangText.innerText = 'Hindi';
+                }
+                
+                document.querySelectorAll('[data-translate]').forEach(el => {
+                    const key = el.dataset.translate;
+                    if (translations[key] && translations[key][lang]) {
+                        el.innerText = translations[key][lang];
+                    }
+                });
+
+                document.querySelectorAll('[data-translate-placeholder]').forEach(el => {
+                    const key = el.dataset.translatePlaceholder;
+                    if (translations[key] && translations[key][lang]) {
+                        el.placeholder = translations[key][lang];
+                    }
+                });
+
+                buildStats();
+                buildContinueLearning();
+                buildDailyQuests();
+                buildCoursesPage();
+                buildProfilePage();
+                buildAchievements();
+                setGreeting();
+                if (document.getElementById('leaderboard-page').classList.contains('active')) {
+                    buildXpLeaderboard();
+                    buildStreakLeaderboard();
+                }
+            }
+
+            function showToast(message) {
+                const toast = document.getElementById('toast');
+                toast.textContent = message;
+                toast.classList.add('show');
+                setTimeout(() => { toast.classList.remove('show'); }, 3000);
+            }
+
+            function showPage(targetId) {
+                document.querySelectorAll('#app-shell .page-section').forEach(page => page.classList.remove('active'));
+                const targetPage = document.getElementById(targetId);
+                if(targetPage) targetPage.classList.add('active');
+                
+                document.querySelectorAll('.bottom-nav-link').forEach(link => link.classList.remove('active'));
+                const activeLink = document.querySelector(`.bottom-nav-link[data-target="${targetId}"]`);
+                if (activeLink) activeLink.classList.add('active');
+                if (targetId === 'leaderboard-page') showXpLeaderboard();
+            }
+
+            function showLessonPage(course) {
+                let courseName = course.name;
+                
+                if (currentLanguage === 'or') courseName = course.or_name;
+                if (currentLanguage === 'hi') courseName = course.hi_name;
+
+                lessonTitle.innerText = `${course.icon} ${courseName}`;
+                showPage('lesson-page');
+            }
+            
+            function showXpLeaderboard() { 
+                xpTab.classList.add('active'); 
+                streakTab.classList.remove('active'); 
+                xpContent.classList.add('active'); 
+                streakContent.classList.remove('active'); 
+                buildXpLeaderboard(); 
+            }
+
+            function showStreakLeaderboard() { 
+                streakTab.classList.add('active'); 
+                xpTab.classList.remove('active'); 
+                streakContent.classList.add('active'); 
+                xpContent.classList.remove('active'); 
+                buildStreakLeaderboard(); 
+            }
+
+            function getRankDisplay(rank) {
+                if (rank === 1) return '🥇';
+                if (rank === 2) return '🥈';
+                if (rank === 3) return '🥉';
+                return rank;
+            }
+            
+            function getLocaleString(){
+                if(currentLanguage === 'or') return 'or-IN';
+                if(currentLanguage === 'hi') return 'hi-IN';
+                return 'en-US';
+            }
+
+            // --- UI BUILD FUNCTIONS (LANGUAGE AWARE) ---
+
+            function buildStats() {
+                const container = document.getElementById('stats-container');
+                const userData = studentData.find(student => student.isUser);
+                const userStreakData = streakData.find(student => student.isUser);
+                const totalXp = userData ? userData.xp.toLocaleString(getLocaleString()) : 'N/A';
+                const dayStreak = userStreakData ? userStreakData.streak.toLocaleString(getLocaleString()) : 'N/A';
+
+                container.innerHTML = `
+                    <div class="card p-4 rounded-xl flex items-center gap-4">
+                        <span class="text-3xl">⚡</span>
+                        <div>
+                            <p class="text-sm text-secondary">${translations.total_xp[currentLanguage]}</p>
+                            <p class="text-xl font-bold">${totalXp}</p>
+                        </div>
+                    </div>
+                    <div class="card p-4 rounded-xl flex items-center gap-4">
+                        <span class="text-3xl">🔥</span>
+                        <div>
+                            <p class="text-sm text-secondary">${translations.day_streak[currentLanguage]}</p>
+                            <p class="text-xl font-bold">${dayStreak}</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function buildContinueLearning() {
+                const c = coursesData[1]; 
+                let courseName = c.name;
+                if (currentLanguage === 'or') courseName = c.or_name;
+                if (currentLanguage === 'hi') courseName = c.hi_name;
+                continueLearningContainer.innerHTML = `<h3 class="text-xl font-bold mb-4">${translations.continue_journey[currentLanguage]}</h3> <div class="card p-5 rounded-2xl flex justify-between items-center"><div class="flex items-center gap-4"><span class="text-4xl">${c.icon}</span><div><p class="font-semibold text-lg">${courseName}</p><p class="text-secondary text-sm">${translations.continue_chapter[currentLanguage]}</p></div></div><button class="bg-accent text-accent-text font-bold px-5 py-2 rounded-lg transform active:scale-95 transition-transform hover:opacity-90">${translations.continue_button[currentLanguage]}</button></div>`;
+            }
+
+            function buildDailyQuests() {
+                 const container = document.getElementById('daily-quests-container');
+                 container.innerHTML = `<h3 class="text-xl font-bold mb-4">${translations.todays_quests[currentLanguage]}</h3> <div class="space-y-4">
+                    <div class="card p-4 rounded-2xl flex items-center justify-between"><div class="flex items-center gap-4"><span class="text-2xl">🎯</span><div><p class="font-semibold">${translations.math_sprint[currentLanguage]}</p><p class="text-secondary text-sm">${translations.math_sprint_desc[currentLanguage]}</p></div></div><div class="text-right"><p class="font-bold text-green-400">+50 XP</p><p class="text-xs text-secondary">1/3 ${translations.complete[currentLanguage]}</p></div></div>
+                    <div class="card p-4 rounded-2xl flex items-center justify-between"><div class="flex items-center gap-4"><span class="text-2xl">✍️</span><div><p class="font-semibold">${translations.perfect_score[currentLanguage]}</p><p class="text-secondary text-sm">${translations.perfect_score_desc[currentLanguage]}</p></div></div><div class="text-right"><p class="font-bold text-green-400">+100 XP</p><p class="text-xs text-secondary">0/1 ${translations.complete[currentLanguage]}</p></div></div>
+                    <div class="card p-4 rounded-2xl flex items-center justify-between"><div class="flex items-center gap-4"><span class="text-2xl">📅</span><div><p class="font-semibold">${translations.daily_checkin[currentLanguage]}</p><p class="text-secondary text-sm">${translations.daily_checkin_desc[currentLanguage]}</p></div></div><button data-xp="10" class="bg-accent text-accent-text text-sm font-bold px-4 py-1 rounded-md claim-btn">${translations.claim[currentLanguage]}</button></div>
+                 </div>`;
+            }
+            
+            function buildAchievements() {
+                const grid = document.getElementById('achievements-grid');
+                grid.innerHTML = '';
+                achievementsData.forEach(ach => {
+                    const isUnlocked = ach.unlocked;
+                    const badgeEl = document.createElement('div');
+                    badgeEl.className = 'flex flex-col items-center gap-2';
+                    badgeEl.innerHTML = `
+                        <div class="achievement-badge ${isUnlocked ? '' : 'locked'}">
+                            ${ach.icon}
+                        </div>
+                        <p class="text-xs font-semibold text-center ${isUnlocked ? '' : 'text-secondary'}">${ach.name}</p>
+                    `;
+                    grid.appendChild(badgeEl);
+                });
+            }
+
+            function buildCoursesPage() {
+                coursesGrid.innerHTML = '';
+                coursesData.forEach((course, index) => {
+                    const courseCard = document.createElement('a');
+                    courseCard.href = '#';
+                    courseCard.className = `card p-5 rounded-2xl no-underline animate-fadeInUp`;
+                    courseCard.style.animationDelay = `${index * 0.1}s`;
+                    let courseName = course.name;
+                    if (currentLanguage === 'or') courseName = course.or_name;
+                    if (currentLanguage === 'hi') courseName = course.hi_name;
+                    courseCard.innerHTML = `
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="font-semibold text-lg">${course.icon} ${courseName}</p>
+                            <span class="text-sm font-bold text-secondary">${course.progress.toLocaleString(getLocaleString())}%</span>
+                        </div>
+                        <div class="w-full themed-bg-surface-light rounded-full h-2.5"><div class="${course.gradient} h-2.5 rounded-full" style="width: ${course.progress}%;"></div></div>
+                    `;
+                    courseCard.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        showLessonPage(course);
+                    });
+                    coursesGrid.appendChild(courseCard);
+                });
+            }
+            
+            function buildXpLeaderboard() {
+                const students = [...studentData];
+                students.sort((a, b) => b.xp - a.xp);
+                xpContainer.innerHTML = '';
+                students.forEach((student, index) => {
+                    const rank = index + 1;
+                    const rankDisplay = getRankDisplay(rank);
+                    const isUserHighlight = student.isUser ? 'bg-sky-500/10 border border-sky-500/30' : 'card';
+                    const userNameStyle = student.isUser ? 'text-accent' : '';
+                    let userName = student.name;
+                    if (student.isUser) {
+                        userName += translations.you_suffix[currentLanguage];
+                    }
+                    const initial = student.name.substring(0,2).toUpperCase();
+                    const avatarUrl = `https://placehold.co/32x32/${student.color}/1f2937?text=${initial}`;
+                    xpContainer.innerHTML += `<div class="flex items-center justify-between p-3 rounded-xl ${isUserHighlight} animate-fadeInUp" style="animation-delay: ${index * 0.05}s"><div class="flex items-center gap-3"><span class="font-bold text-secondary w-8 text-center text-lg">${rankDisplay}</span><img src="${avatarUrl}" class="w-9 h-9 rounded-full"><span class="font-semibold ${userNameStyle}">${userName}</span></div><span class="font-bold text-sky-400">⚡ ${student.xp.toLocaleString(getLocaleString())} XP</span></div>`;
+                });
+            }
+            
+            function buildStreakLeaderboard() {
+                streakContainer.innerHTML = '';
+                streakData.forEach((student, index) => {
+                    const rank = index + 1;
+                    const rankDisplay = getRankDisplay(rank);
+                    const isUserHighlight = student.isUser ? 'bg-sky-500/10 border border-sky-500/30' : 'card';
+                    const userNameStyle = student.isUser ? 'text-accent' : '';
+                    let userName = student.name;
+                    if (student.isUser) {
+                        userName += translations.you_suffix[currentLanguage];
+                    }
+                    const initial = student.name.substring(0,2).toUpperCase();
+                    const avatarUrl = `https://placehold.co/32x32/${student.color}/1f2937?text=${initial}`;
+                    streakContainer.innerHTML += `<div class="flex items-center justify-between p-3 rounded-xl ${isUserHighlight} animate-fadeInUp" style="animation-delay: ${index * 0.05}s"><div class="flex items-center gap-3"><span class="font-bold text-secondary w-8 text-center text-lg">${rankDisplay}</span><img src="${avatarUrl}" class="w-9 h-9 rounded-full"><span class="font-semibold ${userNameStyle}">${userName}</span></div><div class="flex items-center gap-1 text-orange-400"><span class="font-bold">🔥 ${student.streak.toLocaleString(getLocaleString())} ${translations.days_suffix[currentLanguage]}</span></div></div>`;
+                });
+            }
+
+            function buildProfilePage() {
+                const userData = studentData.find(student => student.isUser);
+                const userStreakData = streakData.find(student => student.isUser);
+                if (!userData || !userStreakData) return;
+
+                const totalXp = userData.xp;
+                
+                document.getElementById('profile-total-xp').innerText = totalXp.toLocaleString(getLocaleString());
+                document.getElementById('profile-longest-streak').innerText = `${userStreakData.streak.toLocaleString(getLocaleString())} ${translations.days_suffix[currentLanguage]}`;
+                
+                let level, xpForNextLevel, progressPercentage, xpIntoCurrentLevel;
+                if (totalXp < 1500) { level = 0; xpForNextLevel = 1500; xpIntoCurrentLevel = totalXp; } else { level = 1; let xpAfterLevel1 = totalXp - 1500; level += Math.floor(xpAfterLevel1 / 1000); xpForNextLevel = 1000; xpIntoCurrentLevel = xpAfterLevel1 % 1000; }
+                progressPercentage = (xpIntoCurrentLevel / xpForNextLevel) * 100;
+                const xpRemaining = xpForNextLevel - xpIntoCurrentLevel;
+
+                document.getElementById('profile-level').innerText = translations.profile_level[currentLanguage].replace('{level}', level.toLocaleString(getLocaleString()));
+                document.getElementById('profile-xp-needed').innerText = translations.xp_to_level[currentLanguage]
+                    .replace('{xp}', xpRemaining.toLocaleString(getLocaleString()))
+                    .replace('{level}', (level + 1).toLocaleString(getLocaleString()));
+                document.getElementById('profile-progress-bar').style.width = `${progressPercentage}%`;
+            }
+
+            function setGreeting() {
+                document.getElementById('welcome-greeting').innerText = translations.welcome_greeting[currentLanguage];
+            }
+
+            function login() {
+                loginPage.style.transition = 'opacity 0.5s ease';
+                loginPage.style.opacity = '0';
+                
+                const userStreakData = streakData.find(student => student.isUser);
+                if (userStreakData) {
+                    userStreakData.streak += 1;
+                }
+
+                setTimeout(() => {
+                    loginPage.classList.add('hidden');
+                    appShell.classList.remove('hidden');
+                    bottomNav.classList.remove('hidden');
+                    showPage('home-page');
+                    playSound('login');
+                    showToast('🏆 Achievement Unlocked: First Login!');
+                    // Rebuild stats and profile to show updated streak
+                    buildStats();
+                    buildProfilePage();
+                }, 500);
+            }
+
+            const canvas = document.getElementById('starfield');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            let stars = [];
+            for(let i = 0; i < 100; i++) { stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, radius: Math.random(), alpha: Math.random() }); }
+            function drawStars() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                stars.forEach(star => {
+                    ctx.beginPath();
+                    ctx.arc(star.x, star.y, star.radius, 0, 2 * Math.PI);
+                    ctx.fillStyle = `rgba(255, 255, 255, ${star.alpha})`;
+                    ctx.fill();
+                    star.x -= 0.1;
+                    if (star.x < 0) star.x = canvas.width;
+                });
+                requestAnimationFrame(drawStars);
+            }
+            drawStars();
+
+            // --- EVENT LISTENERS (Using Event Delegation) ---
+            bottomNav.addEventListener('click', function(e) {
+                const link = e.target.closest('.bottom-nav-link');
+                if (link) {
+                    e.preventDefault();
+                    showPage(link.dataset.target);
+                }
+            });
+
+            xpTab.addEventListener('click', showXpLeaderboard);
+            streakTab.addEventListener('click', showStreakLeaderboard);
+            backToCoursesBtn.addEventListener('click', (e) => { e.preventDefault(); showPage('courses-page'); });
+            playQuizBattleBtn.addEventListener('click', () => {
+                showPage('quiz-battle-page');
+                startQuizBattle();
+            });
+            document.getElementById('return-to-courses-btn').addEventListener('click', () => showPage('courses-page'));
+
+            loginBtn.addEventListener('click', login);
+            langSwitcherButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                langDropdown.classList.toggle('hidden');
+            });
+
+            document.getElementById('daily-quests-container').addEventListener('click', function(e) {
+                if(e.target && e.target.classList.contains('claim-btn')) {
+                    const xpAmount = parseInt(e.target.dataset.xp, 10);
+                    const userData = studentData.find(s => s.isUser);
+                    if (userData) {
+                        userData.xp += xpAmount;
+                        buildStats();
+                        buildProfilePage();
+                    }
+
+                    e.target.innerText = translations.complete[currentLanguage];
+                    e.target.disabled = true;
+                    e.target.classList.add('opacity-50', 'cursor-not-allowed');
+                    playSound('reward');
+                    showToast(`+${xpAmount} XP Claimed!`);
+                }
+            });
+
+            document.addEventListener('click', function(event) {
+                if (!langSwitcherButton.contains(event.target)) {
+                    langDropdown.classList.add('hidden');
+                }
+            });
+
+            langDropdown.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (e.target.dataset.lang) {
+                    setLanguage(e.target.dataset.lang);
+                    langDropdown.classList.add('hidden');
+                }
+            });
+            
+            themeToggleButton.addEventListener('click', () => {
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                setTheme(newTheme);
+            });
+            
+            // --- QUIZ BATTLE GAME LOGIC ---
+            const gameCanvas = document.getElementById('game-canvas');
+            const gameCtx = gameCanvas.getContext('2d');
+            const gameActiveView = document.getElementById('game-active-view');
+            const gameOverView = document.getElementById('game-over-view');
+            const questionNumberEl = document.getElementById('question-number');
+            const timerEl = document.getElementById('timer');
+            const questionTextEl = document.getElementById('question-text');
+            const answerOptionsEl = document.getElementById('answer-options');
+            const gameOverTextEl = document.getElementById('game-over-text');
+            
+            let playerHP = 100;
+            let enemyHP = 100;
+            let currentBattleQuestionIndex = 0;
+            let timerInterval;
+            let timeLeft = 15;
+
+            function drawPlayer() {
+                gameCtx.fillStyle = '#38bdf8'; // Blue color for player
+                gameCtx.fillRect(gameCanvas.width / 4 - 25, gameCanvas.height - 100, 50, 50);
+            }
+
+            function drawEnemy() {
+                // Simple octopus alien
+                const centerX = gameCanvas.width * 0.75;
+                const centerY = 100;
+                // Body
+                gameCtx.fillStyle = '#a78bfa'; // Purple color for enemy
+                gameCtx.beginPath();
+                gameCtx.arc(centerX, centerY, 40, 0, Math.PI * 2);
+                gameCtx.fill();
+                // Eyes
+                gameCtx.fillStyle = 'white';
+                gameCtx.beginPath();
+                gameCtx.arc(centerX - 15, centerY - 10, 8, 0, Math.PI * 2);
+                gameCtx.fill();
+                gameCtx.beginPath();
+                gameCtx.arc(centerX + 15, centerY - 10, 8, 0, Math.PI * 2);
+                gameCtx.fill();
+                gameCtx.fillStyle = 'black';
+                 gameCtx.beginPath();
+                gameCtx.arc(centerX - 15, centerY - 10, 4, 0, Math.PI * 2);
+                gameCtx.fill();
+                gameCtx.beginPath();
+                gameCtx.arc(centerX + 15, centerY - 10, 4, 0, Math.PI * 2);
+                gameCtx.fill();
+            }
+            
+            function drawHealthBars(){
+                 // Player HP
+                gameCtx.fillStyle = '#4a5568';
+                gameCtx.fillRect(20, 20, 200, 20);
+                gameCtx.fillStyle = '#4ade80';
+                gameCtx.fillRect(20, 20, playerHP * 2, 20);
+                gameCtx.fillStyle = 'white';
+                gameCtx.font = '14px Manrope';
+                gameCtx.fillText(`Player HP: ${playerHP}`, 25, 35);
+                
+                // Enemy HP
+                gameCtx.fillStyle = '#4a5568';
+                gameCtx.fillRect(gameCanvas.width - 220, 20, 200, 20);
+                gameCtx.fillStyle = '#f87171';
+                gameCtx.fillRect(gameCanvas.width - 220, 20, enemyHP * 2, 20);
+                 gameCtx.fillStyle = 'white';
+                gameCtx.fillText(`Enemy HP: ${enemyHP}`, gameCanvas.width - 215, 35);
+            }
+            
+            function drawGame() {
+                gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+                drawPlayer();
+                drawEnemy();
+                drawHealthBars();
+            }
+            
+            function startQuizBattle() {
+                playerHP = 100;
+                enemyHP = 100;
+                currentBattleQuestionIndex = 0;
+                gameActiveView.classList.remove('hidden');
+                gameOverView.classList.add('hidden');
+                displayBattleQuestion();
+                drawGame();
+            }
+
+            function displayBattleQuestion() {
+                if (currentBattleQuestionIndex >= battleQuizQuestions.length) {
+                    endGame();
+                    return;
+                }
+                const q = battleQuizQuestions[currentBattleQuestionIndex];
+                questionNumberEl.textContent = `Question ${currentBattleQuestionIndex + 1}/${battleQuizQuestions.length}`;
+                questionTextEl.textContent = q.question;
+                answerOptionsEl.innerHTML = '';
+                q.options.forEach(option => {
+                    const button = document.createElement('button');
+                    button.textContent = option;
+                    button.className = 'card p-4 text-left hover:border-accent';
+                    button.onclick = () => handleBattleAnswer(option === q.answer);
+                    answerOptionsEl.appendChild(button);
+                });
+                startTimer();
+            }
+
+            function handleBattleAnswer(isCorrect) {
+                clearInterval(timerInterval);
+                if (isCorrect) {
+                    enemyHP -= 5;
+                    playerAttack();
+                    playSound('reward');
+                } else {
+                    playerHP -= 5;
+                    enemyAttack();
+                }
+                updateHealthBars();
+                
+                if (playerHP <= 0 || enemyHP <= 0) {
+                     setTimeout(endGame, 500);
+                } else {
+                    currentBattleQuestionIndex++;
+                    setTimeout(displayBattleQuestion, 1000);
+                }
+            }
+            
+            function playerAttack(){
+                const laserDiv = document.createElement('div');
+                laserDiv.className = 'laser';
+                const canvasRect = gameCanvas.getBoundingClientRect();
+                laserDiv.style.left = `${canvasRect.left + (gameCanvas.width / 4)}px`;
+                laserDiv.style.top = `${canvasRect.top + gameCanvas.height - 100}px`;
+                document.body.appendChild(laserDiv);
+                setTimeout(()=> laserDiv.remove(), 200);
+            }
+
+            function enemyAttack(){
+                const tentacleDiv = document.createElement('div');
+                tentacleDiv.className = 'tentacle-attack';
+                 const canvasRect = gameCanvas.getBoundingClientRect();
+                tentacleDiv.style.left = `${canvasRect.left + (gameCanvas.width * 0.75)}px`;
+                tentacleDiv.style.top = `${canvasRect.top + 100}px`;
+                document.body.appendChild(tentacleDiv);
+                setTimeout(()=> tentacleDiv.remove(), 300);
+            }
+
+
+            function updateHealthBars(){
+                 drawGame();
+            }
+            
+            function startTimer() {
+                timeLeft = 15;
+                timerEl.textContent = timeLeft;
+                clearInterval(timerInterval);
+                timerInterval = setInterval(() => {
+                    timeLeft--;
+                    timerEl.textContent = timeLeft;
+                    if (timeLeft <= 0) {
+                        clearInterval(timerInterval);
+                        handleBattleAnswer(false); // Time's up is a wrong answer
+                    }
+                }, 1000);
+            }
+
+            function endGame() {
+                clearInterval(timerInterval);
+                gameActiveView.classList.add('hidden');
+                gameOverView.classList.remove('hidden');
+                if (playerHP <= 0) {
+                    gameOverTextEl.textContent = "You Lost!";
+                } else {
+                    gameOverTextEl.textContent = "You Won!";
+                }
+            }
+            
+            // --- Standard Quiz Logic ---
+            const standardQuestionContainer = document.getElementById('standard-question-container');
+            const standardQuestionTextEl = document.getElementById('standard-question-text');
+            const standardAnswerOptionsEl = document.getElementById('standard-answer-options');
+            const standardResultEl = document.getElementById('standard-result');
+            const startQuizBtn = document.getElementById('start-quiz-btn');
+            const nextQuestionBtn = document.getElementById('next-question-btn');
+            let standardCurrentQuestion = 0;
+
+            function loadQuiz() {
+                standardCurrentQuestion = 0;
+                showStandardQuestion();
+                startQuizBtn.classList.add('hidden');
+                standardQuestionContainer.classList.remove('hidden');
+                standardResultEl.textContent = '';
+            }
+
+            function showStandardQuestion() {
+                const quiz = standardQuizData[standardCurrentQuestion];
+                standardQuestionTextEl.textContent = quiz.question;
+                standardAnswerOptionsEl.innerHTML = '';
+                quiz.options.forEach(option => {
+                    const button = document.createElement('button');
+                    button.textContent = option;
+                    button.className = 'w-full text-left card p-3 hover:border-accent';
+                    button.onclick = () => checkStandardAnswer(option);
+                    standardAnswerOptionsEl.appendChild(button);
+                });
+                nextQuestionBtn.classList.add('hidden');
+            }
+
+            function checkStandardAnswer(selectedOption) {
+                const correctAnswer = standardQuizData[standardCurrentQuestion].answer;
+                if (selectedOption === correctAnswer) {
+                    standardResultEl.textContent = "Correct!";
+                    standardResultEl.style.color = 'green';
+                } else {
+                    standardResultEl.textContent = "Wrong! The correct answer was " + correctAnswer;
+                    standardResultEl.style.color = 'red';
+                }
+                Array.from(standardAnswerOptionsEl.children).forEach(button => {
+                    button.disabled = true;
+                    if(button.textContent === correctAnswer) {
+                        button.classList.add('bg-green-500/20', 'border-green-500');
+                    }
+                });
+                nextQuestionBtn.classList.remove('hidden');
+            }
+            
+            startQuizBtn.addEventListener('click', loadQuiz);
+            nextQuestionBtn.addEventListener('click', () => {
+                standardCurrentQuestion++;
+                if (standardCurrentQuestion < standardQuizData.length) {
+                    showStandardQuestion();
+                    standardResultEl.textContent = '';
+                } else {
+                    standardResultEl.textContent = "Quiz Finished!";
+                    nextQuestionBtn.classList.add('hidden');
+                    startQuizBtn.classList.remove('hidden');
+                    startQuizBtn.textContent = "Restart Quiz";
+                }
+            });
+
+
+            // --- INITIAL LOAD ---
+            setTimeout(() => {
+                preloader.style.opacity = '0';
+                setTimeout(() => {
+                    preloader.style.display = 'none';
+                    loginPage.classList.remove('hidden');
+                    setLanguage(currentLanguage);
+                    setTheme(currentTheme); 
+                }, 500);
+            }, 1000);
+
+            // Initial UI build
+            setLanguage(currentLanguage);
+            setTheme(currentTheme);
+            showPage('home-page');
+        });
+    </script>
+</body>
+</html>
+
